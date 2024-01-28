@@ -13,6 +13,8 @@ use std::{
 };
 use terminal_size::{terminal_size, Height};
 
+pub mod cli;
+
 const PROXY_CHILD_CODEHASH: [u8; 32] = [
     33, 195, 93, 190, 27, 52, 74, 36, 136, 207, 51, 33, 214, 206, 84, 47, 142, 159, 48, 85, 68,
     255, 9, 228, 153, 58, 98, 49, 154, 73, 124, 31,
