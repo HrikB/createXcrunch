@@ -28,6 +28,26 @@
 * liability.
 */
 
+/**
+ * A generalized GPU kernel template used for mining Ethereum addresses deployed 
+ * through the CreateX contract factory. 
+ * https://github.com/pcaversaccio/createx
+ *
+ * This kernel is modified from two implementations:
+ * https://github.com/0age/create2crunch/blob/master/src/kernels/keccak256.cl
+ * This implementation is from create2crunch, however, that keccak implementation
+ * is optimized to the point that it only calculates the proper values for the 
+ * last 20 bytes (a partial keccak). This is not sufficient for CreateX which
+ * performs multiple keccak hashes. However, a partial keccak is used for the
+ * last ones.
+ *
+ * https://github.com/Vectorized/function-selector-miner/blob/b900660837f5fac66b5837fdaa5b3f93ff1b0ad4/cpp/main.cpp
+ * This implementation provides a full keccak implementation (although for a
+ * different purpose).
+ *
+ * h/t https://github.com/Vectorized
+ */
+
 /******** Keccak-f[1600] (for finding efficient Ethereum addresses) ********/
 
 #define OPENCL_PLATFORM_UNKNOWN 0
@@ -162,6 +182,37 @@ static inline void partial_keccakf(ulong *a)
   o[6] ^= ((~o[8]) & o[0]);
   o[7] ^= ((~o[9]) & o[1]);
 #undef o
+}
+
+static inline bool isMatching(uchar const *d)
+{
+  __constant char* pattern = PATTERN();
+
+    #pragma unroll
+    for (uint i = 0; i < 20; ++i) {
+        uchar byte = d[i];
+
+        // Extract the high and low nibbles
+        char highNibble = (byte >> 4) & 0x0F;
+        char lowNibble = byte & 0x0F;
+
+        // Convert nibbles to hexadecimal characters
+        char highChar = (highNibble < 10) ? ('0' + highNibble) : ('a' + highNibble - 10);
+        char lowChar = (lowNibble < 10) ? ('0' + lowNibble) : ('a' + lowNibble - 10);
+
+        // Get the corresponding characters from the pattern
+        char patternHighChar = pattern[2 * i];     // Even index
+        char patternLowChar = pattern[2 * i + 1];  // Odd index
+
+        // Compare high nibble
+        if (patternHighChar != 'X' && patternHighChar != highChar)
+            return false;
+
+        // Compare low nibble
+        if (patternLowChar != 'X' && patternLowChar != lowChar)
+            return false;
+    }
+    return true;
 }
 
 #if LEADING_ZEROES == 8
@@ -483,12 +534,15 @@ __kernel void hashMessage(
 
   nonce_t nonce;
 
+  // Salt hash
   GENERATE_SEED()
 
+  // Move resulting hash into the right spot for CREATE2 Hash
 #pragma unroll
   for (int i = 31; i >= 0; --i)
     sponge[i + 21] = sponge[i];
 
+  // Setup Create2 Hash
   // write the control character
   sponge[0] = 0xffu;
 
@@ -560,13 +614,14 @@ __kernel void hashMessage(
   for (int i = 136; i < 200; ++i)
     sponge[i] = 0;
 
+  // If this is a Create3 operation, setup and perform an additional CREATE hash
   CREATE3()
 
   partial_keccakf(spongeBuffer);
 
   // determine if the address meets the constraints
   if (
-    hasLeading(digest) 
+    SUCCESS_CONDITION()
   ) {
     // To be honest, if we are using OpenCL, 
     // we just need to write one solution for all practical purposes,

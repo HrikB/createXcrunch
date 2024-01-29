@@ -98,6 +98,27 @@ impl Config {
             return Err("invalid gpu device value");
         };
 
+        match &reward {
+            RewardVariant::LeadingZeros {
+                leading_zeros_threshold,
+            } => {
+                if leading_zeros_threshold == &0 {
+                    return Err("leading zeros threshold must be greater than 0");
+                }
+                if leading_zeros_threshold > &20 {
+                    return Err("leading zeros threshold must be less than 20");
+                }
+            }
+            RewardVariant::Matching { pattern } => {
+                if pattern.len() != 40 {
+                    return Err("matching pattern must be 40 characters long");
+                }
+                if !pattern.chars().all(|c| c == 'X' || c.is_ascii_hexdigit()) {
+                    return Err("matching pattern must only contain 'X' or hex characters");
+                }
+            }
+        }
+
         Ok(Self {
             gpu_device,
             factory_address,
@@ -448,6 +469,20 @@ fn mk_kernel_src(config: &Config) -> String {
         writeln!(src, "#define GENERATE_SEED() RANDOM()").unwrap();
     }
 
+    match &config.reward {
+        RewardVariant::LeadingZeros {
+            leading_zeros_threshold,
+        } => {
+            writeln!(src, "#define LEADING_ZEROES {leading_zeros_threshold}").unwrap();
+            writeln!(src, "#define SUCCESS_CONDITION() hasLeading(digest)").unwrap();
+        }
+        RewardVariant::Matching { pattern } => {
+            writeln!(src, "#define LEADING_ZEROES 0").unwrap();
+            writeln!(src, "#define PATTERN() \"{pattern}\"").unwrap();
+            writeln!(src, "#define SUCCESS_CONDITION() isMatching(digest)").unwrap();
+        }
+    };
+
     let init_code_hash = match config.variant {
         CreateXVariant::Create2 { init_code_hash } => {
             writeln!(src, "#define CREATE3()").unwrap();
@@ -477,13 +512,6 @@ fn mk_kernel_src(config: &Config) -> String {
     for (i, x) in factory.enumerate().chain(hash) {
         writeln!(src, "#define S2_{} {}u", i + 1, x).unwrap();
     }
-    let lz = match config.reward {
-        RewardVariant::LeadingZeros {
-            leading_zeros_threshold,
-        } => leading_zeros_threshold,
-        RewardVariant::Matching { pattern: _ } => 0,
-    };
-    writeln!(src, "#define LEADING_ZEROES {lz}").unwrap();
 
     src.push_str(KERNEL_SRC);
 
