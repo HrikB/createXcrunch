@@ -1,4 +1,4 @@
-use clap::{command, Arg, ArgGroup, Args, Parser, Subcommand};
+use clap::Parser;
 use createxcrunch::{
     cli::{Cli, Commands},
     gpu, Config, RewardVariant,

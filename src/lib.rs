@@ -29,7 +29,7 @@ static KERNEL_SRC: &str = include_str!("./kernels/keccak256.cl");
 
 enum CreateXVariant {
     Create2 { init_code_hash: [u8; 32] },
-    Create3 {},
+    Create3,
 }
 
 pub enum RewardVariant {
@@ -126,11 +126,6 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
         &mut byte_array,
     )
     .expect("Failed to decode hex");
-
-    let (variant, init_code_hash) = match config.variant {
-        CreateXVariant::Create2 { init_code_hash } => ("Create2", Some(init_code_hash)),
-        CreateXVariant::Create3 {} => ("Create3", None),
-    };
 
     // (create if necessary) and open a file where found salts will be written
     let file = output_file(&config);
@@ -298,6 +293,11 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
                     }
                 };
 
+                let variant = match config.variant {
+                    CreateXVariant::Create2 { init_code_hash: _ } => "Create2",
+                    CreateXVariant::Create3 {} => "Create3",
+                };
+
                 // display information about the current search criteria
                 term.write_line(&format!(
                     "current search space: {}xxxxxxxx{:08x}\t\t\
@@ -449,8 +449,14 @@ fn mk_kernel_src(config: &Config) -> String {
     }
 
     let init_code_hash = match config.variant {
-        CreateXVariant::Create2 { init_code_hash } => init_code_hash,
-        CreateXVariant::Create3 {} => PROXY_CHILD_CODEHASH,
+        CreateXVariant::Create2 { init_code_hash } => {
+            writeln!(src, "#define CREATE3()").unwrap();
+            init_code_hash
+        }
+        CreateXVariant::Create3 => {
+            writeln!(src, "#define CREATE3() RUN_CREATE3()").unwrap();
+            PROXY_CHILD_CODEHASH
+        }
     };
 
     let caller = config.calling_address.iter();

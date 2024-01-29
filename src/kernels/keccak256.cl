@@ -191,6 +191,7 @@ static inline bool hasLeading(uchar const *d)
 }
 #endif
 
+// Debugging helper
 #define PRINT() { \
  printf("\ninput: "); \
   for (int i = 0; i < 85; ++i) \
@@ -430,7 +431,6 @@ static inline bool hasLeading(uchar const *d)
   keccakf(spongeBuffer); \
 }
 
-
 #define RANDOM() { \
   sponge[0] = d_message[0]; \
   sponge[1] = d_message[1]; \
@@ -454,6 +454,21 @@ static inline bool hasLeading(uchar const *d)
   for (int i = 136; i < 200; ++i) \
     sponge[i] = 0; \
   keccakf(spongeBuffer); \
+}
+
+#define RUN_CREATE3() { \
+  keccakf(spongeBuffer); \
+  for (int i = 12; i < 32; ++i) \
+    sponge[i - 10] = sponge[i]; \
+  sponge[0] = 0xd6u; \
+  sponge[1] = 0x94u; \
+  sponge[22] = 0x01u; \
+  sponge[23] = 0x01u; \
+  for (int i = 24; i < 135; ++i) \
+    sponge[i] = 0; \
+  sponge[135] = 0x80u; \
+  for (int i = 136; i < 200; ++i) \
+    sponge[i] = 0; \
 }
 
 __kernel void hashMessage(
@@ -545,27 +560,7 @@ __kernel void hashMessage(
   for (int i = 136; i < 200; ++i)
     sponge[i] = 0;
 
-  keccakf(spongeBuffer);
-
-#pragma unroll
-  for (int i = 12; i < 32; ++i)
-    sponge[i - 10] = sponge[i];
-
-  sponge[0] = 0xd6u;
-  sponge[1] = 0x94u;
-  sponge[22] = 0x01u;
-  sponge[23] = 0x01u;
-
-#pragma unroll
-  for (int i = 24; i < 135; ++i)
-    sponge[i] = 0;
-
-  // end padding
-  sponge[135] = 0x80u;
-
-#pragma unroll
-  for (int i = 136; i < 200; ++i)
-    sponge[i] = 0;
+  CREATE3()
 
   partial_keccakf(spongeBuffer);
 

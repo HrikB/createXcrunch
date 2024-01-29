@@ -1,4 +1,4 @@
-use clap::{command, Arg, ArgGroup, Args, Parser, Subcommand};
+use clap::{command, ArgGroup, Args, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(arg_required_else_help = true)]
