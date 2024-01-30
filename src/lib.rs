@@ -165,18 +165,9 @@ impl Config {
 ///
 pub fn gpu(config: Config) -> ocl::Result<()> {
     println!(
-        "Setting up experimental OpenCL miner using device {}...",
+        "Setting up OpenCL miner using device {}...",
         config.gpu_device
     );
-
-    let mut byte_array: [u8; 32] = [0; 32]; // Initialize with zeros
-
-    // Decode the hexadecimal string and fill the byte array
-    hex::decode_to_slice(
-        "14a4ef128e0152790917bf1b0b28fcbdd871d03a79807e8be3e6a2263fe2039e",
-        &mut byte_array,
-    )
-    .expect("Failed to decode hex");
 
     // (create if necessary) and open a file where found salts will be written
     let file = output_file(&config);
@@ -351,10 +342,11 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
 
                 // display information about the current search criteria
                 term.write_line(&format!(
-                    "current search space: {}xxxxxxxx{:08x}\t\t\
+                    "current search space: {}xxxxxxxx{:06x}\t\t\
                      threshold: mining for {} address {}",
                     hex::encode(salt),
-                    BigEndian::read_u64(&view_buf),
+                    // Only the first 3 bytes are used
+                    BigEndian::read_u64(&view_buf) >> 8,
                     variant,
                     threshold_string
                 ))?;
@@ -425,7 +417,6 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
         };
 
         // get the address that results from the hash
-        // let address = compute_create3_address(&config.factory_address, salt.as_slice());
         let address = solutions[1]
             .to_be_bytes()
             .into_iter()
