@@ -35,11 +35,10 @@ pub struct CliArgs {
         id = "caller",
         long,
         short,
-        default_value = "0x0000000000000000000000000000000000000000",
         long_help = "Set the caller address in hex format for a permissioned deployment.",
         help_heading = "Crunching options"
     )]
-    pub caller: String,
+    pub caller: Option<String>,
 
     #[arg(
         id = "chain-id",
@@ -56,7 +55,7 @@ pub struct CliArgs {
         long = "leading",
         short = 'z',
         group = "mining-pattern",
-        long_help = "Minimum number of leading zeros. Cannot be used in combination with -m.\n\nExample: -z 4.",
+        long_help = "Minimum number of leading zero bytes. Cannot be used in combination with -m.\n\nExample: -z 4.",
         help_heading = "Crunching options"
     )]
     pub zeros: Option<String>,

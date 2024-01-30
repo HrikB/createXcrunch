@@ -2,6 +2,7 @@ use alloy_primitives::{hex, FixedBytes};
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use console::Term;
 use fs4::FileExt;
+use itertools::chain;
 use ocl::{Buffer, Context, Device, MemFlags, Platform, ProQue, Program, Queue};
 use rand::{thread_rng, Rng};
 use separator::Separatable;
@@ -27,7 +28,7 @@ const WORK_FACTOR: u128 = (WORK_SIZE as u128) / 1_000_000;
 
 static KERNEL_SRC: &str = include_str!("./kernels/keccak256.cl");
 
-enum CreateXVariant {
+pub enum CreateXVariant {
     Create2 { init_code_hash: [u8; 32] },
     Create3,
 }
@@ -37,11 +38,24 @@ pub enum RewardVariant {
     Matching { pattern: String },
 }
 
+pub enum SaltVariant {
+    CrosschainSender {
+        chain_id: [u8; 32],
+        calling_address: [u8; 20],
+    },
+    Crosschain {
+        chain_id: [u8; 32],
+    },
+    Sender {
+        calling_address: [u8; 20],
+    },
+    Random,
+}
+
 pub struct Config {
     gpu_device: u8,
     factory_address: [u8; 20],
-    calling_address: [u8; 20],
-    chain_id: Option<[u8; 32]>,
+    salt_variant: SaltVariant,
     variant: CreateXVariant,
     reward: RewardVariant,
     output: String,
@@ -51,7 +65,7 @@ impl Config {
     pub fn new(
         gpu_device: &str,
         factory_address: &String,
-        calling_address: &String,
+        calling_address: Option<&String>,
         chain_id: Option<&String>,
         init_code_hash: Option<&String>,
         reward: RewardVariant,
@@ -67,8 +81,9 @@ impl Config {
         // convert main arguments from hex string to vector of bytes
         let factory_address_vec =
             hex::decode(factory_address).expect("could not decode factory address argument");
-        let calling_address_vec =
-            hex::decode(calling_address).expect("could not decode calling address argument");
+        let calling_address_vec = calling_address.map(|calling_address| {
+            hex::decode(calling_address).expect("could not decode calling address argument")
+        });
         let init_code_hash_vec = init_code_hash.map(|init_code_hash| {
             hex::decode(init_code_hash).expect("could not decode init code hash argument")
         });
@@ -76,8 +91,10 @@ impl Config {
         // convert from vector to fixed array
         let factory_address = TryInto::<[u8; 20]>::try_into(factory_address_vec)
             .expect("invalid length for factory address argument");
-        let calling_address = TryInto::<[u8; 20]>::try_into(calling_address_vec)
-            .expect("invalid length for calling address argument");
+        let calling_address = calling_address_vec.map(|calling_address_vec| {
+            TryInto::<[u8; 20]>::try_into(calling_address_vec)
+                .expect("invalid length for calling address argument")
+        });
         let init_code_hash = init_code_hash_vec.map(|init_code_hash_vec| {
             TryInto::<[u8; 32]>::try_into(init_code_hash_vec)
                 .expect("invalid length for init code hash argument")
@@ -119,11 +136,24 @@ impl Config {
             }
         }
 
+        let salt_variant = match (chain_id, calling_address) {
+            (Some(chain_id), Some(calling_address)) if calling_address != [0u8; 20] => {
+                SaltVariant::CrosschainSender {
+                    chain_id,
+                    calling_address,
+                }
+            }
+            (Some(chain_id), None) => SaltVariant::Crosschain { chain_id },
+            (None, Some(calling_address)) if calling_address != [0u8; 20] => {
+                SaltVariant::Sender { calling_address }
+            }
+            _ => SaltVariant::Random,
+        };
+
         Ok(Self {
             gpu_device,
             factory_address,
-            calling_address,
-            chain_id,
+            salt_variant,
             variant: create_variant,
             reward,
             output: output.to_string(),
@@ -308,7 +338,7 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
                 let threshold_string = match config.reward {
                     RewardVariant::LeadingZeros {
                         leading_zeros_threshold,
-                    } => format!("with {} leading zeros", leading_zeros_threshold),
+                    } => format!("with {} leading zero byte(s)", leading_zeros_threshold),
                     RewardVariant::Matching { ref pattern } => {
                         format!("matching pattern {}", pattern)
                     }
@@ -378,35 +408,20 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
         let solution = solutions[0];
         let solution = solution.to_le_bytes();
 
-        let salt = if config.chain_id.is_some() && config.calling_address != [0u8; 20] {
-            config
-                .calling_address
-                .into_iter()
-                .chain([1u8])
-                .chain(salt)
-                .chain(solution[..7].iter().copied())
-                .collect::<Vec<u8>>()
-        } else if config.chain_id.is_none() && config.calling_address != [0u8; 20] {
-            config
-                .calling_address
-                .into_iter()
-                .chain([0u8])
-                .chain(salt)
-                .chain(solution[..7].iter().copied())
-                .collect::<Vec<u8>>()
-        } else if config.chain_id.is_some() && config.calling_address == [0u8; 20] {
-            config
-                .calling_address
-                .into_iter()
-                .chain([1u8])
-                .chain(salt)
-                .chain(solution[..7].iter().copied())
-                .collect::<Vec<u8>>()
-        } else {
-            salt.into_iter()
-                .chain(solution[..7].iter().copied())
-                .chain([0u8; 21])
-                .collect::<Vec<u8>>()
+        let mined_salt = chain!(salt, solution[..7].iter().copied());
+
+        let salt: Vec<u8> = match config.salt_variant {
+            SaltVariant::CrosschainSender {
+                chain_id: _,
+                calling_address,
+            } => chain!(calling_address, [1u8], mined_salt).collect(),
+            SaltVariant::Crosschain { chain_id: _ } => {
+                chain!([0u8; 20], [1u8], mined_salt).collect()
+            }
+            SaltVariant::Sender { calling_address } => {
+                chain!(calling_address, [0u8], mined_salt).collect()
+            }
+            SaltVariant::Random => chain!(mined_salt, [0u8; 21]).collect(),
         };
 
         // get the address that results from the hash
@@ -459,15 +474,27 @@ fn output_file(config: &Config) -> File {
 fn mk_kernel_src(config: &Config) -> String {
     let mut src = String::with_capacity(2048 + KERNEL_SRC.len());
 
-    if config.chain_id.is_some() && config.calling_address != [0u8; 20] {
-        writeln!(src, "#define GENERATE_SEED() SENDER_XCHAIN()").unwrap();
-    } else if config.chain_id.is_none() && config.calling_address != [0u8; 20] {
-        writeln!(src, "#define GENERATE_SEED() SENDER()").unwrap();
-    } else if config.chain_id.is_some() && config.calling_address == [0u8; 20] {
-        writeln!(src, "#define GENERATE_SEED() XCHAIN()").unwrap();
-    } else {
-        writeln!(src, "#define GENERATE_SEED() RANDOM()").unwrap();
-    }
+    let (caller, chain_id) = match config.salt_variant {
+        SaltVariant::CrosschainSender {
+            chain_id,
+            calling_address,
+        } => {
+            writeln!(src, "#define GENERATE_SEED() SENDER_XCHAIN()").unwrap();
+            (calling_address, Some(chain_id))
+        }
+        SaltVariant::Crosschain { chain_id } => {
+            writeln!(src, "#define GENERATE_SEED() XCHAIN()").unwrap();
+            ([0u8; 20], Some(chain_id))
+        }
+        SaltVariant::Sender { calling_address } => {
+            writeln!(src, "#define GENERATE_SEED() SENDER()").unwrap();
+            (calling_address, None)
+        }
+        SaltVariant::Random => {
+            writeln!(src, "#define GENERATE_SEED() RANDOM()").unwrap();
+            ([0u8; 20], None)
+        }
+    };
 
     match &config.reward {
         RewardVariant::LeadingZeros {
@@ -494,9 +521,8 @@ fn mk_kernel_src(config: &Config) -> String {
         }
     };
 
-    let caller = config.calling_address.iter();
-    let chain_id = config
-        .chain_id
+    let caller = caller.iter();
+    let chain_id = chain_id
         .iter()
         .flatten()
         .enumerate()

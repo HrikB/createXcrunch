@@ -30,7 +30,7 @@ fn main() {
             let _ = match Config::new(
                 &gpu_device_id,
                 &factory,
-                &caller,
+                caller.as_ref(),
                 chain_id.as_ref(),
                 Some(&init_code_hash),
                 reward,
@@ -61,7 +61,7 @@ fn main() {
             let _ = match Config::new(
                 &gpu_device_id,
                 &factory,
-                &caller,
+                caller.as_ref(),
                 chain_id.as_ref(),
                 None,
                 reward,
