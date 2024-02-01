@@ -14,29 +14,44 @@ fn main() {
             let caller = args.cli_args.caller;
             let chain_id = args.cli_args.chain_id;
             let init_code_hash = args.init_code_hash;
-            let reward = match (args.cli_args.zeros, args.cli_args.pattern) {
-                (Some(zeros), None) => RewardVariant::LeadingZeros {
-                    leading_zeros_threshold: zeros
-                        .parse::<u8>()
-                        .expect("Leading zeros threshold must be a number"),
+            let reward = match (
+                args.cli_args.zeros,
+                args.cli_args.total,
+                args.cli_args.either,
+                args.cli_args.pattern,
+            ) {
+                (Some(zeros), None, false, None) => RewardVariant::LeadingZeros {
+                    zeros_threshold: zeros,
                 },
-                (None, Some(pattern)) => RewardVariant::Matching {
-                    pattern: pattern.to_string(),
+                (None, Some(total), false, None) => RewardVariant::TotalZeros {
+                    zeros_threshold: total,
                 },
+                (Some(zeros), Some(total), false, None) => RewardVariant::LeadingAndTotalZeros {
+                    leading_zeros_threshold: zeros,
+                    total_zeros_threshold: total,
+                },
+                (Some(zeros), Some(total), true, None) => RewardVariant::LeadingOrTotalZeros {
+                    leading_zeros_threshold: zeros,
+                    total_zeros_threshold: total,
+                },
+                (None, None, false, Some(pattern)) => RewardVariant::Matching { pattern },
                 _ => unreachable!(),
             };
             let output = args.cli_args.output;
 
-            let _ = match Config::new(
-                &gpu_device_id,
+            match Config::new(
+                gpu_device_id,
                 &factory,
-                caller.as_ref(),
-                chain_id.as_ref(),
+                caller.as_deref(),
+                chain_id,
                 Some(&init_code_hash),
                 reward,
                 &output,
             ) {
-                Ok(config) => gpu(config),
+                Ok(config) => match gpu(config) {
+                    Ok(_) => (),
+                    Err(e) => panic!("{}", e),
+                },
                 Err(e) => panic!("{}", e),
             };
         }
@@ -45,29 +60,39 @@ fn main() {
             let factory = args.factory;
             let caller = args.caller;
             let chain_id = args.chain_id;
-            let reward = match (args.zeros, args.pattern) {
-                (Some(zeros), None) => RewardVariant::LeadingZeros {
-                    leading_zeros_threshold: zeros
-                        .parse::<u8>()
-                        .expect("Leading zeros threshold must be a number"),
+            let reward = match (args.zeros, args.total, args.either, args.pattern) {
+                (Some(zeros), None, false, None) => RewardVariant::LeadingZeros {
+                    zeros_threshold: zeros,
                 },
-                (None, Some(pattern)) => RewardVariant::Matching {
-                    pattern: pattern.to_string(),
+                (None, Some(total), false, None) => RewardVariant::TotalZeros {
+                    zeros_threshold: total,
                 },
+                (Some(zeros), Some(total), false, None) => RewardVariant::LeadingAndTotalZeros {
+                    leading_zeros_threshold: zeros,
+                    total_zeros_threshold: total,
+                },
+                (Some(zeros), Some(total), true, None) => RewardVariant::LeadingOrTotalZeros {
+                    leading_zeros_threshold: zeros,
+                    total_zeros_threshold: total,
+                },
+                (None, None, false, Some(pattern)) => RewardVariant::Matching { pattern },
                 _ => unreachable!(),
             };
             let output = args.output;
 
-            let _ = match Config::new(
-                &gpu_device_id,
+            match Config::new(
+                gpu_device_id,
                 &factory,
-                caller.as_ref(),
-                chain_id.as_ref(),
+                caller.as_deref(),
+                chain_id,
                 None,
                 reward,
                 &output,
             ) {
-                Ok(config) => gpu(config),
+                Ok(config) => match gpu(config) {
+                    Ok(_) => (),
+                    Err(e) => panic!("{}", e),
+                },
                 Err(e) => panic!("{}", e),
             };
         }

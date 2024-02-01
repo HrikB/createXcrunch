@@ -1,4 +1,4 @@
-use clap::{command, ArgGroup, Args, Parser, Subcommand};
+use clap::{command, ArgAction, ArgGroup, Args, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(arg_required_else_help = true)]
@@ -9,7 +9,8 @@ pub struct Cli {
 }
 
 #[derive(Args)]
-#[clap(group = ArgGroup::new("mining-pattern").required(true))]
+#[clap(group = ArgGroup::new("search-criteria").multiple(true).required(true))]
+#[clap(group = ArgGroup::new("zeros-threshold"))]
 pub struct CliArgs {
     #[arg(
         id = "factory",
@@ -29,7 +30,7 @@ pub struct CliArgs {
         long_help = "Set the GPU device ID.",
         help_heading = "Crunching options"
     )]
-    pub gpu_device_id: String,
+    pub gpu_device_id: u8,
 
     #[arg(
         id = "caller",
@@ -48,27 +49,48 @@ pub struct CliArgs {
         help_heading = "Crunching options",
         visible_alias = "crp"
     )]
-    pub chain_id: Option<String>,
+    pub chain_id: Option<u64>,
 
     #[arg(
         id = "zeros",
         long = "leading",
         short = 'z',
-        group = "mining-pattern",
-        long_help = "Minimum number of leading zero bytes. Cannot be used in combination with -m.\n\nExample: -z 4.",
+        group = "search-criteria",
+        long_help = "Minimum number of leading zero bytes. Cannot be used in combination with --matching.\n\nExample: --leading 4.",
         help_heading = "Crunching options"
     )]
-    pub zeros: Option<String>,
+    pub zeros: Option<u8>,
+
+    #[arg(
+        id = "total",
+        long = "total",
+        short = 't',
+        group = "search-criteria",
+        long_help = "Total number of zero bytes. If used in conjunction with --leading, search criteria will be both thresholds. Pass --either to search for either threshold.\n\nExample: --total 32.",
+        help_heading = "Crunching options"
+    )]
+    pub total: Option<u8>,
+
+    #[arg(
+        id = "either",
+        long = "either",
+        long_help = "Search for either threshold. Must be used with --leading and --total.",
+        requires_all = &["zeros", "total"],
+        action = ArgAction::SetTrue,
+        help_heading = "Crunching options"
+    )]
+    pub either: bool,
 
     #[arg(
         id = "pattern",
         long = "matching",
         short = 'm',
-        group = "mining-pattern",
-        long_help = "Matching pattern for the contract address. Cannot be used in combination with -z.\n\nExample: -m ba5edXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXba5ed.",
-        help_heading = "Crunching options"
+        group = "search-criteria",
+        long_help = "Matching pattern for the contract address. Cannot be used in combination with --leading.\n\nExample: --matching ba5edXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXba5ed.",
+        help_heading = "Crunching options",
+        conflicts_with_all = &["zeros", "total"]
     )]
-    pub pattern: Option<String>,
+    pub pattern: Option<Box<str>>,
 
     #[arg(
         id = "output",

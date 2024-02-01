@@ -34,8 +34,23 @@ pub enum CreateXVariant {
 }
 
 pub enum RewardVariant {
-    LeadingZeros { leading_zeros_threshold: u8 },
-    Matching { pattern: String },
+    LeadingZeros {
+        zeros_threshold: u8,
+    },
+    TotalZeros {
+        zeros_threshold: u8,
+    },
+    LeadingAndTotalZeros {
+        leading_zeros_threshold: u8,
+        total_zeros_threshold: u8,
+    },
+    LeadingOrTotalZeros {
+        leading_zeros_threshold: u8,
+        total_zeros_threshold: u8,
+    },
+    Matching {
+        pattern: Box<str>,
+    },
 }
 
 pub enum SaltVariant {
@@ -52,32 +67,25 @@ pub enum SaltVariant {
     Random,
 }
 
-pub struct Config {
+pub struct Config<'a> {
     gpu_device: u8,
     factory_address: [u8; 20],
     salt_variant: SaltVariant,
     variant: CreateXVariant,
     reward: RewardVariant,
-    output: String,
+    output: &'a str,
 }
 
-impl Config {
+impl<'a> Config<'a> {
     pub fn new(
-        gpu_device: &str,
-        factory_address: &String,
-        calling_address: Option<&String>,
-        chain_id: Option<&String>,
-        init_code_hash: Option<&String>,
+        gpu_device: u8,
+        factory_address: &str,
+        calling_address: Option<&str>,
+        chain_id: Option<u64>,
+        init_code_hash: Option<&str>,
         reward: RewardVariant,
-        output: &String,
+        output: &'a str,
     ) -> Result<Self, &'static str> {
-        let chain_id = chain_id.map(|chain_id| {
-            chain_id
-                // Chain ids are technically 32 bytes, but 8 bytes should be enough
-                .parse::<u64>()
-                .expect("could not parse chain id argument as u64")
-        });
-
         // convert main arguments from hex string to vector of bytes
         let factory_address_vec =
             hex::decode(factory_address).expect("could not decode factory address argument");
@@ -110,21 +118,21 @@ impl Config {
             None => CreateXVariant::Create3 {},
         };
 
-        // convert gpu argument to u8
-        let Ok(gpu_device) = gpu_device.parse::<u8>() else {
-            return Err("invalid gpu device value");
-        };
-
         match &reward {
-            RewardVariant::LeadingZeros {
+            RewardVariant::LeadingZeros { zeros_threshold }
+            | RewardVariant::TotalZeros { zeros_threshold } => {
+                validate_zeros_threshold(zeros_threshold)?;
+            }
+            RewardVariant::LeadingOrTotalZeros {
                 leading_zeros_threshold,
+                total_zeros_threshold,
+            }
+            | RewardVariant::LeadingAndTotalZeros {
+                leading_zeros_threshold,
+                total_zeros_threshold,
             } => {
-                if leading_zeros_threshold == &0 {
-                    return Err("leading zeros threshold must be greater than 0");
-                }
-                if leading_zeros_threshold > &20 {
-                    return Err("leading zeros threshold must be less than 20");
-                }
+                validate_zeros_threshold(leading_zeros_threshold)?;
+                validate_zeros_threshold(total_zeros_threshold)?;
             }
             RewardVariant::Matching { pattern } => {
                 if pattern.len() != 40 {
@@ -134,6 +142,17 @@ impl Config {
                     return Err("matching pattern must only contain 'X' or hex characters");
                 }
             }
+        }
+
+        fn validate_zeros_threshold(threhsold: &u8) -> Result<(), &'static str> {
+            if threhsold == &0u8 {
+                return Err("threshold must be greater than 0");
+            }
+            if threhsold > &20u8 {
+                return Err("threshold must be less than 20");
+            }
+
+            Ok(())
         }
 
         let salt_variant = match (chain_id, calling_address) {
@@ -156,7 +175,7 @@ impl Config {
             salt_variant,
             variant: create_variant,
             reward,
-            output: output.to_string(),
+            output,
         })
     }
 }
@@ -327,9 +346,26 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
                 ))?;
 
                 let threshold_string = match config.reward {
-                    RewardVariant::LeadingZeros {
+                    RewardVariant::LeadingZeros { zeros_threshold } => {
+                        format!("with {} leading zero byte(s)", zeros_threshold)
+                    }
+                    RewardVariant::TotalZeros { zeros_threshold } => {
+                        format!("with {} total zero byte(s)", zeros_threshold)
+                    }
+                    RewardVariant::LeadingAndTotalZeros {
                         leading_zeros_threshold,
-                    } => format!("with {} leading zero byte(s)", leading_zeros_threshold),
+                        total_zeros_threshold,
+                    } => format!(
+                        "with {} leading and {} total zero byte(s)",
+                        leading_zeros_threshold, total_zeros_threshold
+                    ),
+                    RewardVariant::LeadingOrTotalZeros {
+                        leading_zeros_threshold,
+                        total_zeros_threshold,
+                    } => format!(
+                        "with {} leading or {} total zero byte(s)",
+                        leading_zeros_threshold, total_zeros_threshold
+                    ),
                     RewardVariant::Matching { ref pattern } => {
                         format!("matching pattern {}", pattern)
                     }
@@ -456,7 +492,7 @@ fn output_file(config: &Config) -> File {
         .append(true)
         .create(true)
         .read(true)
-        .open(config.output.clone())
+        .open(config.output)
         .unwrap_or_else(|_| panic!("Could not create or open {} file.", config.output))
 }
 
@@ -488,11 +524,38 @@ fn mk_kernel_src(config: &Config) -> String {
     };
 
     match &config.reward {
-        RewardVariant::LeadingZeros {
+        RewardVariant::LeadingZeros { zeros_threshold } => {
+            writeln!(src, "#define LEADING_ZEROES {zeros_threshold}").unwrap();
+            writeln!(src, "#define SUCCESS_CONDITION() hasLeading(digest)").unwrap();
+        }
+        RewardVariant::TotalZeros { zeros_threshold } => {
+            writeln!(src, "#define LEADING_ZEROES 0").unwrap();
+            writeln!(src, "#define TOTAL_ZEROES {zeros_threshold}").unwrap();
+            writeln!(src, "#define SUCCESS_CONDITION() hasTotal(digest)").unwrap();
+        }
+        RewardVariant::LeadingAndTotalZeros {
             leading_zeros_threshold,
+            total_zeros_threshold,
         } => {
             writeln!(src, "#define LEADING_ZEROES {leading_zeros_threshold}").unwrap();
-            writeln!(src, "#define SUCCESS_CONDITION() hasLeading(digest)").unwrap();
+            writeln!(src, "#define TOTAL_ZEROES {total_zeros_threshold}").unwrap();
+            writeln!(
+                src,
+                "#define SUCCESS_CONDITION() hasLeading(digest) && hasTotal(digest)"
+            )
+            .unwrap();
+        }
+        RewardVariant::LeadingOrTotalZeros {
+            leading_zeros_threshold,
+            total_zeros_threshold,
+        } => {
+            writeln!(src, "#define LEADING_ZEROES {leading_zeros_threshold}").unwrap();
+            writeln!(src, "#define TOTAL_ZEROES {total_zeros_threshold}").unwrap();
+            writeln!(
+                src,
+                "#define SUCCESS_CONDITION() hasLeading(digest) || hasTotal(digest)"
+            )
+            .unwrap();
         }
         RewardVariant::Matching { pattern } => {
             writeln!(src, "#define LEADING_ZEROES 0").unwrap();
