@@ -1,6 +1,6 @@
 # createXcrunch
 
-createXcrunch is a Rust-based program designed to efficiently find zero-leading or pattern-matching addresses for the [CreateX](https://github.com/pcaversaccio/createx) contract factory. Uses OpenCL in order to leverage a GPU's mining capabilities.
+createXcrunch is a Rust-based program designed to efficiently find zero-leading, zero-containing, or pattern-matching addresses for the [CreateX](https://github.com/pcaversaccio/createx) contract factory. Uses OpenCL in order to leverage a GPU's mining capabilities.
 
 ## Installation
 
