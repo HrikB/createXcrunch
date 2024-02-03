@@ -5,7 +5,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-     http://www.apache.org/licenses/LICENSE-2.0
+    https://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,11 +16,9 @@
 
 /**
 * Based on the following, with small tweaks and optimizations:
+* https://github.com/lwYeo/SoliditySHA3Miner/blob/master/SoliditySHA3Miner/Miner/Kernels/OpenCL/sha3KingKernel.cl
 *
-* https://github.com/lwYeo/SoliditySHA3Miner/blob/master/SoliditySHA3Miner/
-*   Miner/Kernels/OpenCL/sha3KingKernel.cl
-*
-* Originally modified for openCL processing by lwYeo
+* Originally modified for OpenCL processing by lwYeo
 *
 * Original implementer: David Leon Gil
 *
@@ -30,19 +28,19 @@
 
 /**
  * A generalized GPU kernel template used for mining Ethereum addresses deployed 
- * through the CreateX contract factory. 
+ * through the CreateX contract factory:
  * https://github.com/pcaversaccio/createx
  *
  * This kernel is modified from two implementations:
  * https://github.com/0age/create2crunch/blob/master/src/kernels/keccak256.cl
- * This implementation is from create2crunch, however, that keccak implementation
+ * This implementation is from create2crunch, however, that keccak256 implementation
  * is optimized to the point that it only calculates the proper values for the 
- * last 20 bytes (a partial keccak). This is not sufficient for CreateX which
- * performs multiple keccak hashes. However, a partial keccak is used for the
+ * last 20 bytes (a partial keccak256). This is not sufficient for CreateX which
+ * performs multiple keccak256 hashes. However, a partial keccak256 is used for the
  * last ones.
  *
  * https://github.com/Vectorized/function-selector-miner/blob/b900660837f5fac66b5837fdaa5b3f93ff1b0ad4/cpp/main.cpp
- * This implementation provides a full keccak implementation (although for a
+ * This implementation provides a full keccak256 implementation (although for a
  * different purpose).
  *
  * h/t https://github.com/Vectorized
