@@ -33,13 +33,13 @@ cargo build --release
 Use the `--help` flag for a full overview of all the features and how to use them:
 
 ```console
-./target/release/createxcrunch create3 --help
+./target/release/createxcrunch create2 --help
 ```
 
 or
 
 ```console
-./target/release/createxcrunch create2 --help
+./target/release/createxcrunch create3 --help
 ```
 
 ## Contributions
