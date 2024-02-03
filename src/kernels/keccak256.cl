@@ -22,7 +22,7 @@
 *
 * Originally modified for openCL processing by lwYeo
 *
-* Original implementor: David Leon Gil
+* Original implementer: David Leon Gil
 *
 * License: CC0, attribution kindly requested. Blame taken too, but not
 * liability.

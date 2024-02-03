@@ -51,6 +51,7 @@ jobs:
         uses: codespell-project/actions-codespell@v2.0
         with:
           check_filenames: true
+          ignore_words_list: wee
           skip: ./.git
 
   validate-links:
