@@ -1,0 +1,80 @@
+name: 👮‍♂️ Sanity checks
+
+on: [push, pull_request, workflow_dispatch]
+
+concurrency:
+  group: ${{github.workflow}}-${{github.ref}}
+  cancel-in-progress: true
+
+jobs:
+  prettify:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        node_version:
+          - 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node_version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+
+      - name: Run Prettier
+        run: npx prettier -c '**/*.{md,yml,yaml}'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: Format Rust code
+        run: cargo fmt --all --check
+
+  codespell:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run codespell
+        uses: codespell-project/actions-codespell@v2.0
+        with:
+          check_filenames: true
+          ignore_words_list: wee
+          skip: ./.git
+
+  validate-links:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        ruby_version:
+          - 3.3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby_version }}
+          bundler-cache: true
+
+      - name: Install awesome_bot
+        run: gem install awesome_bot
+
+      - name: Validate URLs
+        run: awesome_bot ./*.md src/*.rs src/**/*.cl --allow-dupe --request-delay 0.4
