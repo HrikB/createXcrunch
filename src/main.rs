@@ -34,7 +34,14 @@ fn main() {
                     leading_zeros_threshold: zeros,
                     total_zeros_threshold: total,
                 },
-                (None, None, false, Some(pattern)) => RewardVariant::Matching { pattern },
+                (None, None, false, Some(pattern)) => {
+                    let pattern = pattern
+                        .strip_prefix("0x")
+                        .unwrap_or(&pattern)
+                        .to_owned()
+                        .into_boxed_str();
+                    RewardVariant::Matching { pattern }
+                }
                 _ => unreachable!(),
             };
             let output = args.cli_args.output;
@@ -75,7 +82,14 @@ fn main() {
                     leading_zeros_threshold: zeros,
                     total_zeros_threshold: total,
                 },
-                (None, None, false, Some(pattern)) => RewardVariant::Matching { pattern },
+                (None, None, false, Some(pattern)) => {
+                    let pattern = pattern
+                        .strip_prefix("0x")
+                        .unwrap_or(&pattern)
+                        .to_owned()
+                        .into_boxed_str();
+                    RewardVariant::Matching { pattern }
+                }
                 _ => unreachable!(),
             };
             let output = args.output;
