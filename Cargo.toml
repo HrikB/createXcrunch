@@ -19,3 +19,6 @@ separator = "0.4.1"
 sha3 = "0.10.8"
 terminal_size = "0.3.0"
 tiny-keccak = "2.0.2"
+
+[dev-dependencies]
+rstest = "0.18.2"
