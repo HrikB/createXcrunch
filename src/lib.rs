@@ -461,21 +461,28 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
             .collect::<Vec<u8>>();
 
         // count total and leading zero bytes
-        let mut _total = 0;
+        let mut total = 0;
         let mut leading = 0;
         for (i, &b) in address.iter().enumerate() {
             if b == 0 {
-                _total += 1;
+                total += 1;
             } else if leading == 0 {
                 // set leading on finding non-zero byte
                 leading = i;
             }
         }
 
-        let output = format!("0x{} => {}", hex::encode(salt), hex::encode(address),);
+        let output = format!("0x{} => 0x{}", hex::encode(salt), hex::encode(address),);
 
-        let show = format!("{output} ({leading})");
-        found_list.push(show.to_string());
+        let show = format!("{output} ({leading} / {total})");
+        match config.reward {
+            RewardVariant::Matching { pattern: _ } => {
+                found_list.push(output.to_string());
+            }
+            _ => {
+                found_list.push(show);
+            }
+        }
 
         file.lock_exclusive().expect("Couldn't lock file.");
 
