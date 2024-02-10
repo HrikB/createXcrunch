@@ -1,4 +1,4 @@
-use alloy_primitives::{hex, FixedBytes};
+use alloy_primitives::{hex, Address, FixedBytes};
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use console::Term;
 use fs4::FileExt;
@@ -68,19 +68,19 @@ pub enum SaltVariant {
 }
 
 pub struct Config<'a> {
-    gpu_device: u8,
-    factory_address: [u8; 20],
-    salt_variant: SaltVariant,
-    variant: CreateXVariant,
-    reward: RewardVariant,
-    output: &'a str,
+    pub gpu_device: u8,
+    pub factory_address: [u8; 20],
+    pub salt_variant: SaltVariant,
+    pub create_variant: CreateXVariant,
+    pub reward: RewardVariant,
+    pub output: &'a str,
 }
 
 impl<'a> Config<'a> {
     pub fn new(
         gpu_device: u8,
-        factory_address: &str,
-        calling_address: Option<&str>,
+        factory_address_str: &str,
+        calling_address_str: Option<&str>,
         chain_id: Option<u64>,
         init_code_hash: Option<&str>,
         reward: RewardVariant,
@@ -88,8 +88,8 @@ impl<'a> Config<'a> {
     ) -> Result<Self, &'static str> {
         // convert main arguments from hex string to vector of bytes
         let factory_address_vec =
-            hex::decode(factory_address).expect("could not decode factory address argument");
-        let calling_address_vec = calling_address.map(|calling_address| {
+            hex::decode(factory_address_str).expect("could not decode factory address argument");
+        let calling_address_vec = calling_address_str.map(|calling_address| {
             hex::decode(calling_address).expect("could not decode calling address argument")
         });
         let init_code_hash_vec = init_code_hash.map(|init_code_hash| {
@@ -169,11 +169,40 @@ impl<'a> Config<'a> {
             _ => SaltVariant::Random,
         };
 
+        if factory_address_str.chars().any(|c| c.is_uppercase()) {
+            let factory_address_str = match factory_address_str.strip_prefix("0x") {
+                Some(_) => factory_address_str.to_string(),
+                None => format!("0x{}", factory_address_str),
+            };
+            match Address::parse_checksummed(factory_address_str, None) {
+                Ok(_) => {}
+                Err(_) => {
+                    return Err("factory address uses invalid checksum");
+                }
+            }
+        }
+
+        if calling_address.is_some() {
+            let calling_address_str = calling_address_str.unwrap();
+            if calling_address_str.chars().any(|c| c.is_uppercase()) {
+                let calling_address_str = match calling_address_str.strip_prefix("0x") {
+                    Some(_) => calling_address_str.to_string(),
+                    None => format!("0x{}", calling_address_str),
+                };
+                match Address::parse_checksummed(calling_address_str, None) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        return Err("caller address uses invalid checksum");
+                    }
+                }
+            };
+        };
+
         Ok(Self {
             gpu_device,
             factory_address,
             salt_variant,
-            variant: create_variant,
+            create_variant,
             reward,
             output,
         })
@@ -371,7 +400,7 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
                     }
                 };
 
-                let variant = match config.variant {
+                let variant = match config.create_variant {
                     CreateXVariant::Create2 { init_code_hash: _ } => "Create2",
                     CreateXVariant::Create3 {} => "Create3",
                 };
@@ -505,7 +534,7 @@ fn output_file(config: &Config) -> File {
 
 /// Creates the OpenCL kernel source code by populating the template with the
 /// values from the Config object.
-fn mk_kernel_src(config: &Config) -> String {
+pub fn mk_kernel_src(config: &Config) -> String {
     let mut src = String::with_capacity(2048 + KERNEL_SRC.len());
 
     let (caller, chain_id) = match config.salt_variant {
@@ -571,7 +600,7 @@ fn mk_kernel_src(config: &Config) -> String {
         }
     };
 
-    let init_code_hash = match config.variant {
+    let init_code_hash = match config.create_variant {
         CreateXVariant::Create2 { init_code_hash } => {
             writeln!(src, "#define CREATE3()").unwrap();
             init_code_hash
