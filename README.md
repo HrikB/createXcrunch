@@ -9,14 +9,14 @@
 
 1. **Clone the Repository**
 
-```
+```console
 git clone https://github.com/HrikB/createXcrunch
 cd createXcrunch
 ```
 
 2. **Build the Project**
 
-```
+```console
 cargo build --release
 ```
 
@@ -48,6 +48,6 @@ PRs welcome!
 
 ## Acknowledgements
 
-- https://github.com/0age/create2crunch
-- https://github.com/Vectorized/function-selector-miner
-- https://github.com/pcaversaccio/createx
+- [`create2crunch`](https://github.com/0age/create2crunch)
+- [Function Selection Miner](https://github.com/Vectorized/function-selector-miner)
+- [`CreateX` – A Trustless, Universal Contract Deployer](https://github.com/pcaversaccio/createx)
