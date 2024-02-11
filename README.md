@@ -42,6 +42,20 @@ or
 ./target/release/createxcrunch create3 --help
 ```
 
+## Local Development
+
+We recommend using [`cargo-nextest`](https://nexte.st) as test runner for this repository. To install it on a Linux `x86_64` machine, invoke:
+
+```console
+curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+```
+
+Afterwards you can run the tests via:
+
+```console
+cargo nextest run
+```
+
 ## Contributions
 
 PRs welcome!
