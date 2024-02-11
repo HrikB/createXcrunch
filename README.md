@@ -10,7 +10,7 @@
 1. **Clone the Repository**
 
 ```console
-git clone https://github.com/HrikB/createXcrunch
+git clone https://github.com/HrikB/createXcrunch.git
 cd createXcrunch
 ```
 
@@ -21,6 +21,48 @@ cargo build --release
 ```
 
 > Building on Windows currently fails (see [this](https://github.com/HrikB/createXcrunch/issues/1) issue). If you want to continue using Windows, we recommend using the Windows Subsystem for Linux (WSL) and installing Rust via `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`.
+
+## Example Setup on [Vast.ai](https://vast.ai)
+
+#### Update Linux
+
+```console
+sudo apt update && sudo apt upgrade
+```
+
+#### Install `build-essential` Packages
+
+> We need the GNU Compiler Collection (GCC) later.
+
+```console
+sudo apt install build-essential
+```
+
+#### Install CUDA Toolkit
+
+> `createXcrunch` uses [OpenCL](https://en.wikipedia.org/wiki/OpenCL) which is natively supported via the NVIDIA OpenCL extensions.
+
+```console
+sudo apt install nvidia-cuda-toolkit
+```
+
+#### Install Rust
+
+> Enter `1` to select the default option and press the `Enter` key to continue the installation. Restart the current shell after completing the installation.
+
+```console
+curl https://sh.rustup.rs -sSf | sh
+```
+
+#### Build `createxcrunch`
+
+```console
+git clone https://github.com/HrikB/createXcrunch.git
+cd createXcrunch
+cargo build --release
+```
+
+🎉 Congrats, now you're ready to crunch your salt(s)!
 
 ## Usage
 

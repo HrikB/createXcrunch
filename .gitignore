@@ -7,3 +7,6 @@
 
 # cargo build folder
 target
+
+# Default output file
+output.txt
