@@ -54,7 +54,7 @@ sudo apt install nvidia-cuda-toolkit
 curl https://sh.rustup.rs -sSf | sh
 ```
 
-#### Build `createxcrunch`
+#### Build `createXcrunch`
 
 ```console
 git clone https://github.com/HrikB/createXcrunch.git
