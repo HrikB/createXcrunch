@@ -77,4 +77,6 @@ jobs:
         run: gem install awesome_bot
 
       - name: Validate URLs
-        run: awesome_bot ./*.md src/*.rs src/**/*.cl --allow-dupe --request-delay 0.4
+        run: |
+          awesome_bot ./*.md src/*.rs src/**/*.cl --allow-dupe --request-delay 0.4 \
+          --white-list https://github.com/HrikB/createXcrunch.git https://get.nexte.st/latest/linux
