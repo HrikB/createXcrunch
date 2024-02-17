@@ -396,7 +396,7 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
                         leading_zeros_threshold, total_zeros_threshold
                     ),
                     RewardVariant::Matching { ref pattern } => {
-                        format!("matching pattern {}", pattern)
+                        format!("matching pattern 0x{}", pattern)
                     }
                 };
 
