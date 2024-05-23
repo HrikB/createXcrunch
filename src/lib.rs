@@ -561,10 +561,12 @@ pub fn mk_kernel_src(config: &Config) -> String {
 
     match &config.reward {
         RewardVariant::LeadingZeros { zeros_threshold } => {
+            writeln!(src, "#define PATTERN() 0").unwrap();
             writeln!(src, "#define LEADING_ZEROES {zeros_threshold}").unwrap();
             writeln!(src, "#define SUCCESS_CONDITION() hasLeading(digest)").unwrap();
         }
         RewardVariant::TotalZeros { zeros_threshold } => {
+            writeln!(src, "#define PATTERN() 0").unwrap();
             writeln!(src, "#define LEADING_ZEROES 0").unwrap();
             writeln!(src, "#define TOTAL_ZEROES {zeros_threshold}").unwrap();
             writeln!(src, "#define SUCCESS_CONDITION() hasTotal(digest)").unwrap();
@@ -573,6 +575,7 @@ pub fn mk_kernel_src(config: &Config) -> String {
             leading_zeros_threshold,
             total_zeros_threshold,
         } => {
+            writeln!(src, "#define PATTERN() 0").unwrap();
             writeln!(src, "#define LEADING_ZEROES {leading_zeros_threshold}").unwrap();
             writeln!(src, "#define TOTAL_ZEROES {total_zeros_threshold}").unwrap();
             writeln!(
@@ -585,6 +588,7 @@ pub fn mk_kernel_src(config: &Config) -> String {
             leading_zeros_threshold,
             total_zeros_threshold,
         } => {
+            writeln!(src, "#define PATTERN() 0").unwrap();
             writeln!(src, "#define LEADING_ZEROES {leading_zeros_threshold}").unwrap();
             writeln!(src, "#define TOTAL_ZEROES {total_zeros_threshold}").unwrap();
             writeln!(
