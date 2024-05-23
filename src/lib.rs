@@ -493,12 +493,14 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
         let mut total = 0;
         let mut leading = 0;
         for (i, &b) in address.iter().enumerate() {
-            if b == 0 {
-                total += 1;
-            } else if leading == 0 {
-                // set leading on finding non-zero byte
-                leading = i;
+            #[rustfmt::skip]
+            if b != 0 { continue; };
+
+            if leading == i {
+                leading = i + 1;
             }
+
+            total += 1;
         }
 
         let output = format!("0x{} => 0x{}", hex::encode(salt), hex::encode(address),);
