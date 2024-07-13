@@ -21,7 +21,7 @@ cargo build --release
 ```
 
 > [!NOTE]
-> Building on Windows works as long as you have installed the [CUDA Toolkit](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/) or the [AMD Radeon Software](https://www.amd.com/en/resources/support-articles/faqs/RS-INSTALL.html). However, the [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install) installation on Windows `x64` systems with NVIDIA hardware fails, as the current NVIDIA driver does not yet support passing [OpenCL](https://en.wikipedia.org/wiki/OpenCL) to Windows Subsystem for Linux (WSL).
+> Building on Windows works as long as you have installed the [CUDA Toolkit](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/) or the [AMD Radeon Software](https://www.amd.com/en/resources/support-articles/faqs/RS-INSTALL.html). However, the [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install) installation on Windows `x64` systems with NVIDIA hardware fails, as the current NVIDIA driver does not yet support passing [OpenCL](https://en.wikipedia.org/wiki/OpenCL) to Windows Subsystem for Linux (WSL) (see [here](https://github.com/microsoft/WSL/issues/6951)).
 
 ## Example Setup on [Vast.ai](https://vast.ai)
 
