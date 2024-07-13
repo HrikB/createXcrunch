@@ -20,7 +20,8 @@ cd createXcrunch
 cargo build --release
 ```
 
-> Building on Windows currently fails (see [this](https://github.com/HrikB/createXcrunch/issues/1) issue). If you want to continue using Windows, we recommend using the Windows Subsystem for Linux (WSL) and installing Rust via `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`.
+> [!NOTE]
+> Building on Windows works as long as you have installed the [CUDA Toolkit](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows) or the [AMD Radeon Software](https://www.amd.com/en/resources/support-articles/faqs/RS-INSTALL.html). However, the [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install) installation on Windows `x64` systems with NVIDIA hardware fails, as the current NVIDIA driver does not yet support passing [OpenCL](https://en.wikipedia.org/wiki/OpenCL) to Windows Subsystem for Linux (WSL).
 
 ## Example Setup on [Vast.ai](https://vast.ai)
 
