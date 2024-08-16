@@ -11,7 +11,13 @@ pub struct Cli {
 fn to_lowercase_boxed_str(s: &str) -> Result<Box<str>, &'static str> {
     let modified_string: String = s
         .chars()
-        .map(|c| if c != 'X' { c.to_lowercase().to_string() } else { c.to_string() })
+        .map(|c| {
+            if c != 'X' {
+                c.to_lowercase().to_string()
+            } else {
+                c.to_string()
+            }
+        })
         .collect();
     Ok(modified_string.into_boxed_str())
 }
