@@ -8,6 +8,20 @@ pub struct Cli {
     pub command: Commands,
 }
 
+fn to_lowercase_boxed_str(s: &str) -> Result<Box<str>, &'static str> {
+    let modified_string: String = s
+        .chars()
+        .map(|c| {
+            if c != 'X' {
+                c.to_lowercase().to_string()
+            } else {
+                c.to_string()
+            }
+        })
+        .collect();
+    Ok(modified_string.into_boxed_str())
+}
+
 #[derive(Args)]
 #[clap(group = ArgGroup::new("search-criteria").multiple(true).required(true))]
 #[clap(group = ArgGroup::new("zeros-threshold"))]
@@ -88,7 +102,8 @@ pub struct CliArgs {
         group = "search-criteria",
         long_help = "Matching pattern for the contract address. Cannot be used in combination with --leading.\n\nExample: --matching ba5edXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXba5ed.",
         help_heading = "Crunching options",
-        conflicts_with_all = &["zeros", "total"]
+        conflicts_with_all = &["zeros", "total"],
+        value_parser = to_lowercase_boxed_str
     )]
     pub pattern: Option<Box<str>>,
 

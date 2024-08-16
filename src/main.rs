@@ -40,7 +40,7 @@ fn main() {
                         .unwrap_or(&pattern)
                         .to_owned()
                         .into_boxed_str();
-                    RewardVariant::Matching { pattern }
+                    RewardVariant::Matching { pattern: pattern }
                 }
                 _ => unreachable!(),
             };
