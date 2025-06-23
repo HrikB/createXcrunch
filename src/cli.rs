@@ -47,6 +47,14 @@ pub struct CliArgs {
     pub gpu_device_id: u8,
 
     #[arg(
+        id = "metal",
+        long,
+        long_help = "Use Metal API for Apple Silicon GPUs instead of OpenCL.",
+        help_heading = "Crunching options"
+    )]
+    pub use_metal: bool,
+
+    #[arg(
         id = "caller",
         long,
         short,

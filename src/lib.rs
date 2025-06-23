@@ -16,6 +16,12 @@ use terminal_size::{terminal_size, Height};
 
 pub mod cli;
 
+#[cfg(target_os = "macos")]
+pub mod metal_gpu;
+
+#[cfg(target_os = "macos")]
+pub mod metal_kernel;
+
 const PROXY_CHILD_CODEHASH: [u8; 32] = [
     33, 195, 93, 190, 27, 52, 74, 36, 136, 207, 51, 33, 214, 206, 84, 47, 142, 159, 48, 85, 68,
     255, 9, 228, 153, 58, 98, 49, 154, 73, 124, 31,
@@ -74,6 +80,7 @@ pub struct Config<'a> {
     pub create_variant: CreateXVariant,
     pub reward: RewardVariant,
     pub output: &'a str,
+    pub use_metal: bool,
 }
 
 impl<'a> Config<'a> {
@@ -85,6 +92,7 @@ impl<'a> Config<'a> {
         init_code_hash: Option<&str>,
         reward: RewardVariant,
         output: &'a str,
+        use_metal: bool,
     ) -> Result<Self, &'static str> {
         // convert main arguments from hex string to vector of bytes
         let factory_address_vec =
@@ -205,6 +213,7 @@ impl<'a> Config<'a> {
             create_variant,
             reward,
             output,
+            use_metal,
         })
     }
 }

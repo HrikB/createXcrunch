@@ -13,6 +13,7 @@ fn main() {
             let factory = args.cli_args.factory;
             let caller = args.cli_args.caller;
             let chain_id = args.cli_args.chain_id;
+            let use_metal = args.cli_args.use_metal;
             let init_code_hash = args.init_code_hash;
             let reward = match (
                 args.cli_args.zeros,
@@ -54,10 +55,33 @@ fn main() {
                 Some(&init_code_hash),
                 reward,
                 &output,
+                use_metal,
             ) {
-                Ok(config) => match gpu(config) {
-                    Ok(_) => (),
-                    Err(e) => panic!("{}", e),
+                Ok(config) => {
+                    #[cfg(target_os = "macos")]
+                    {
+                        if config.use_metal {
+                            match createxcrunch::metal_gpu::gpu_metal(config) {
+                                Ok(_) => (),
+                                Err(e) => panic!("{}", e),
+                            }
+                        } else {
+                            match gpu(config) {
+                                Ok(_) => (),
+                                Err(e) => panic!("{}", e),
+                            }
+                        }
+                    }
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        if use_metal {
+                            panic!("Metal is only available on macOS");
+                        }
+                        match gpu(config) {
+                            Ok(_) => (),
+                            Err(e) => panic!("{}", e),
+                        }
+                    }
                 },
                 Err(e) => panic!("{}", e),
             };
@@ -67,6 +91,7 @@ fn main() {
             let factory = args.factory;
             let caller = args.caller;
             let chain_id = args.chain_id;
+            let use_metal = args.use_metal;
             let reward = match (args.zeros, args.total, args.either, args.pattern) {
                 (Some(zeros), None, false, None) => RewardVariant::LeadingZeros {
                     zeros_threshold: zeros,
@@ -102,10 +127,33 @@ fn main() {
                 None,
                 reward,
                 &output,
+                use_metal,
             ) {
-                Ok(config) => match gpu(config) {
-                    Ok(_) => (),
-                    Err(e) => panic!("{}", e),
+                Ok(config) => {
+                    #[cfg(target_os = "macos")]
+                    {
+                        if config.use_metal {
+                            match createxcrunch::metal_gpu::gpu_metal(config) {
+                                Ok(_) => (),
+                                Err(e) => panic!("{}", e),
+                            }
+                        } else {
+                            match gpu(config) {
+                                Ok(_) => (),
+                                Err(e) => panic!("{}", e),
+                            }
+                        }
+                    }
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        if use_metal {
+                            panic!("Metal is only available on macOS");
+                        }
+                        match gpu(config) {
+                            Ok(_) => (),
+                            Err(e) => panic!("{}", e),
+                        }
+                    }
                 },
                 Err(e) => panic!("{}", e),
             };
